@@ -6,6 +6,7 @@ import { buildSite } from './site.js';
 import { score } from './scoring.js';
 import { generateRecommendations } from './ai.js';
 import { fetchPageSpeed, psiChecks } from './psi.js';
+import { getCertificateExpiry, sslExpiryCheck } from './ssl.js';
 
 function envBool(v, dflt) {
   if (v == null) return dflt;
@@ -51,6 +52,20 @@ export async function runAudit(inputUrl, {
     } catch (e) {
       console.warn('[audit] PSI failed:', e.message);
     }
+  }
+
+  // --- SSL certificate expiry (raw TLS handshake, independent of the HTTP
+  // fetch/render above — see ssl.js). Best-effort: if the site isn't on
+  // HTTPS or the handshake fails, getCertificateExpiry() resolves null and
+  // we simply skip the check (the existing 'https' check already reports
+  // the non-HTTPS case).
+  try {
+    const hostname = new URL(analysis.url).hostname;
+    const certInfo = await getCertificateExpiry(hostname);
+    const sslCheck = sslExpiryCheck(certInfo);
+    if (sslCheck) analysis.checks.push(sslCheck);
+  } catch (e) {
+    console.warn('[audit] SSL expiry check failed:', e.message);
   }
 
   const scored = score(analysis);

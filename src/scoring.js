@@ -11,7 +11,7 @@ const ZERO_WEIGHT = new Set([
 const WEIGHTS = {
   // On-Page
   title: 3, meta_description: 3, h1: 2, image_alt: 2, broken_images: 3,
-  canonical: 1, schema: 1, robots: 3, analytics: 1, js_dependency: 3,
+  canonical: 1, schema: 1, robots: 3, analytics: 1,
   dup_titles: 2, dup_descs: 1, missing_meta: 2,
   robots_txt: 1, sitemap: 1, friendly_urls: 1,
   // Content Quality
@@ -32,7 +32,7 @@ const WEIGHTS = {
   open_graph: 2, twitter_card: 1, social_links: 1,
   // Security
   https: 4, hsts: 1, clickjacking: 1, content_type_options: 1,
-  mixed_content: 3, jquery_version: 1, cookie_consent: 3,
+  mixed_content: 3, jquery_version: 1, cookie_consent: 3, ssl_expiry: 4,
   // Accessibility (WCAG 2.1 AA via axe-core)
   a11y_contrast: 3, a11y_alt_text: 2, a11y_heading_order: 2,
   a11y_form_labels: 3, a11y_accessible_names: 2, a11y_aria: 2,
