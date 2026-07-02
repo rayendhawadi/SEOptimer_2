@@ -4,6 +4,7 @@ import { validateSchema } from './schema.js';
 import * as cheerio from 'cheerio';
 import { buildAccessibilityChecks } from './accessibility.js';
 import { compareMobileDesktop } from './mobileConsistency.js';
+import { detectThirdPartyScripts } from './thirdParty.js';
 const CATEGORIES = {
   onpage: 'On-Page SEO',
   content: 'Content Quality',
@@ -353,6 +354,30 @@ export function analyze(ctx) {
     `${blockingScripts} scripts + ${headCss} stylesheets in <head>`,
     blocking < 4 ? 'Few render-blocking resources.'
       : 'Defer non-critical JS and inline critical CSS to speed first paint.'));
+
+  // Third-party scripts (analytics, ads/social pixels, chat widgets, embeds)
+  // detected among the resources Puppeteer already captured during render.
+  if (render?.resources) {
+    const tp = detectThirdPartyScripts(render.resources);
+    const tpKb = Math.round(tp.totalBytes / 1024);
+    const tpDelaySec = (tp.estimatedDelayMs / 1000).toFixed(1);
+
+    let tpStatus = 'pass';
+    if (tp.count >= 6 || tpKb >= 500) tpStatus = 'fail';
+    else if (tp.count >= 3 || tpKb >= 200) tpStatus = 'warn';
+
+    const topServices = tp.byService.slice(0, 3)
+      .map((s) => `${s.service} (${Math.round(s.bytes / 1024)} Ko)`)
+      .join(', ');
+
+    checks.push(check('performance', 'third_party_scripts', 'Third-Party Scripts',
+      tpStatus,
+      `${tp.count} script(s) tiers · ${tpKb} Ko · ~${tpDelaySec}s ajoutée(s)`,
+      tp.count === 0
+        ? 'No known third-party scripts detected.'
+        : `${tp.count} script(s) tiers détecté(s), dont ${topServices || 'divers services'} — ` +
+        `ralentissent le chargement d'environ ${tpDelaySec}s.`));
+  }
 
   // CDN usage
   const cdnHint = /cloudflare|cloudfront|akamai|fastly|jsdelivr|cdnjs|unpkg|gstatic|bunny|stackpath|netlify|vercel/i;
