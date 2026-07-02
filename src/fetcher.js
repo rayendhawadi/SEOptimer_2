@@ -4,7 +4,7 @@
 // The renderer is optional — if Chrome can't launch we degrade gracefully.
 
 import puppeteer from 'puppeteer';
-
+import { runAxe } from './accessibility.js';
 /** Normalize a user-supplied URL into something fetchable. */
 export function normalizeUrl(input) {
   let url = String(input || '').trim();
@@ -105,7 +105,9 @@ export async function renderWithChrome(url) {
     const loadTimeMs = Date.now() - start;
 
     const renderedHtml = await page.content();
-
+    // Accessibility audit (axe-core) — reuses this already-open page,
+    // no extra browser/request. Returns null if it fails; never throws.
+    const axeResult = await runAxe(page);
     // Browser-side performance + metrics.
     const perf = await page.evaluate(() => {
       const nav = performance.getEntriesByType('navigation')[0] || {};
@@ -157,6 +159,7 @@ export async function renderWithChrome(url) {
       requestCount: resources.length,
       totalBytes,
       status: response ? response.status() : 0,
+      accessibility: axeResult,
       screenshots: {
         desktop: `data:image/jpeg;base64,${desktopShot}`,
         tablet: `data:image/jpeg;base64,${tabletShot}`,
@@ -164,6 +167,6 @@ export async function renderWithChrome(url) {
       },
     };
   } finally {
-    await browser.close().catch(() => {});
+    await browser.close().catch(() => { });
   }
 }

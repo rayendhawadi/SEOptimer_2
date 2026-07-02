@@ -2,7 +2,7 @@
 // list of "checks", each with a status (pass/warn/fail) and weight used for scoring.
 import { validateSchema } from './schema.js';
 import * as cheerio from 'cheerio';
-
+import { buildAccessibilityChecks } from './accessibility.js';
 const CATEGORIES = {
   onpage: 'On-Page SEO',
   content: 'Content Quality',
@@ -10,6 +10,7 @@ const CATEGORIES = {
   usability: 'Usability',
   performance: 'Performance',
   social: 'Social',
+  accessibility: 'Accessibility',
   security: 'Security & Technology',
 };
 
@@ -445,6 +446,11 @@ export function analyze(ctx) {
     analyticsName ? `Analytics is installed (${analyticsName}).`
       : 'No web analytics detected. Install GA4 or a privacy-friendly alternative.'));
 
+  // ------------------------------------------------------------ ACCESSIBILITY
+  // Homepage-only (render is only produced for the first crawled page —
+  // see crawler.js). No render / no axe result -> no checks pushed, the
+  // category is simply empty rather than breaking the report.
+  checks.push(...buildAccessibilityChecks(render?.accessibility));
   return {
     url: raw.finalUrl || url,
     categories: CATEGORIES,
