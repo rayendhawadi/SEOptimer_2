@@ -8,7 +8,7 @@ const STATUS_META = {
   fail: { icon: '&#10007;', color: '#ef4444', label: 'Error' },
 };
 
-const CAT_ORDER = ['onpage', 'content', 'links', 'usability', 'performance', 'social', 'security'];
+const CAT_ORDER = ['onpage', 'content', 'links', 'usability', 'performance', 'accessibility', 'social', 'security'];
 
 function esc(s) {
   return String(s ?? '')
@@ -178,8 +178,8 @@ export function renderReport({ analysis, scored, ai, screenshots, generatedAt, b
         ${cwvCard('Largest Contentful Paint', 'LCP', src.LCP, (v) => (v / 1000).toFixed(2) + 's')}
         ${cwvCard('Cumulative Layout Shift', 'CLS', src.CLS, (v) => v.toFixed(3))}
         ${src.INP != null
-          ? cwvCard('Interaction to Next Paint', 'INP', src.INP, (v) => Math.round(v) + 'ms')
-          : cwvCard('First Contentful Paint', 'FCP', src.FCP, (v) => (v / 1000).toFixed(2) + 's')}
+        ? cwvCard('Interaction to Next Paint', 'INP', src.INP, (v) => Math.round(v) + 'ms')
+        : cwvCard('First Contentful Paint', 'FCP', src.FCP, (v) => (v / 1000).toFixed(2) + 's')}
         ${cwvCard('Total Blocking Time', 'TBT', psi.lab.TBT, (v) => Math.round(v) + 'ms')}
       </div>
       ${oppRows ? `<h3 class="sub-h">Top Opportunities</h3>
@@ -190,7 +190,7 @@ export function renderReport({ analysis, scored, ai, screenshots, generatedAt, b
 
   // SERP (Google search result) preview — shown in the On-Page section.
   let serpBread = site.baseHost || '';
-  try { const u = new URL(analysis.url); serpBread = u.hostname.replace(/^www\./, '') + (u.pathname !== '/' ? ' › ' + u.pathname.split('/').filter(Boolean).join(' › ') : ''); } catch {}
+  try { const u = new URL(analysis.url); serpBread = u.hostname.replace(/^www\./, '') + (u.pathname !== '/' ? ' › ' + u.pathname.split('/').filter(Boolean).join(' › ') : ''); } catch { }
   const serpDesc = (m.metaDesc || '').trim() || 'No meta description set — Google will generate a snippet from page content.';
   const schemaChips = (m.schemaTypes || []).length
     ? `<h3 class="sub-h">Structured Data Types</h3>
@@ -228,7 +228,7 @@ export function renderReport({ analysis, scored, ai, screenshots, generatedAt, b
     <h3 class="sub-h">Social Share Preview</h3>
     <div class="share-card">
       ${ogImage ? `<div class="share-img"><img src="${esc(ogImage)}" alt="share image" onerror="this.parentNode.style.display='none'"/></div>`
-        : `<div class="share-img share-img-empty">No og:image set</div>`}
+      : `<div class="share-img share-img-empty">No og:image set</div>`}
       <div class="share-body">
         <div class="share-host">${esc(site.baseHost || '')}</div>
         <div class="share-title">${esc(trunc(ogTitle, 90) || '(no title)')}</div>
@@ -579,6 +579,9 @@ export function renderReport({ analysis, scored, ai, screenshots, generatedAt, b
   <!-- ACCESSIBILITY & BEST PRACTICES -->
   ${a11ySection}
 
+  <!-- PAGE 7c — ACCESSIBILITY (WCAG, axe-core) -->
+  ${getCat('accessibility') ? `<div class="page">${categoryCard(getCat('accessibility'))}</div>` : ''}
+  
   <!-- PAGE 8 — USABILITY + PREVIEW -->
   <div class="page">
     ${getCat('usability') ? categoryCard(getCat('usability')) : ''}
