@@ -1,6 +1,6 @@
 // Runs all SEO checks against a fetched/rendered page and returns a structured
 // list of "checks", each with a status (pass/warn/fail) and weight used for scoring.
-
+import { validateSchema } from './schema.js';
 import * as cheerio from 'cheerio';
 
 const CATEGORIES = {
@@ -136,7 +136,7 @@ export function analyze(ctx) {
     Object.values(node).forEach(collectTypes);
   };
   $('script[type="application/ld+json"]').each((_, e) => {
-    try { collectTypes(JSON.parse($(e).text())); } catch {}
+    try { collectTypes(JSON.parse($(e).text())); } catch { }
   });
   $('[itemtype]').each((_, e) => {
     const t = ($(e).attr('itemtype') || '').split('/').pop();
@@ -147,6 +147,8 @@ export function analyze(ctx) {
     hasSchema ? ([...schemaTypes].slice(0, 6).join(', ') || `${ldJson} JSON-LD, ${microdata} microdata`) : '(none)',
     hasSchema ? 'Structured data found — enables rich search results.' :
       'No schema markup detected. Add JSON-LD for rich results.'));
+
+  checks.push(...validateSchema($));
 
   // ---------------------------------------------------------------- USABILITY
   // Mobile viewport
@@ -432,12 +434,12 @@ export function analyze(ctx) {
   // Analytics tracking
   const analyticsName =
     /googletagmanager|gtag\(/i.test(html) ? 'Google Tag Manager / GA4' :
-    /google-analytics|ga\(/i.test(html) ? 'Google Analytics' :
-    /plausible\.io/i.test(html) ? 'Plausible' :
-    /matomo|piwik/i.test(html) ? 'Matomo' :
-    /static\.hotjar/i.test(html) ? 'Hotjar' :
-    /fathom/i.test(html) ? 'Fathom' :
-    /segment\.(com|io)/i.test(html) ? 'Segment' : '';
+      /google-analytics|ga\(/i.test(html) ? 'Google Analytics' :
+        /plausible\.io/i.test(html) ? 'Plausible' :
+          /matomo|piwik/i.test(html) ? 'Matomo' :
+            /static\.hotjar/i.test(html) ? 'Hotjar' :
+              /fathom/i.test(html) ? 'Fathom' :
+                /segment\.(com|io)/i.test(html) ? 'Segment' : '';
   checks.push(check('onpage', 'analytics', 'Analytics',
     analyticsName ? 'pass' : 'warn', analyticsName || '(none detected)',
     analyticsName ? `Analytics is installed (${analyticsName}).`
@@ -501,7 +503,7 @@ function detectTech($, html, headers) {
   if (body.includes('nuxt')) tech.add('Nuxt');
   if ($('script[src*="jquery"]').length || body.includes('jquery')) tech.add('jQuery');
   if (body.includes('bootstrap')) tech.add('Bootstrap');
-  if (body.includes('tailwind') || /\b(?:flex|grid|text-|bg-)\w+/.test(body)) {/* noisy, skip */}
+  if (body.includes('tailwind') || /\b(?:flex|grid|text-|bg-)\w+/.test(body)) {/* noisy, skip */ }
   if (body.includes('googletagmanager') || body.includes('gtag(')) tech.add('Google Tag Manager');
   if (body.includes('google-analytics') || body.includes('ga(')) tech.add('Google Analytics');
   if (body.includes('hotjar')) tech.add('Hotjar');
