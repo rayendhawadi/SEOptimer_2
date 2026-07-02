@@ -50,8 +50,24 @@ export async function rawFetch(url) {
 }
 
 /** Extract visible text + visible links from the page in its CURRENT viewport.
- *  Runs inside the browser (page.evaluate) — no side effects on the page. */
-async function extractVisibleContent(page) {
+ *  Runs inside the browser (page.evaluate) — no side effects on the page.
+ *  Retries once on transient "execution context destroyed" errors, which
+ *  happen when the page redirects/rehydrates right after domcontentloaded. */
+async function extractVisibleContent(page, attempt = 1) {
+  try {
+    return await evaluateVisibleContent(page);
+  } catch (err) {
+    const transient = /context was destroyed|execution context/i.test(err.message || '');
+    if (transient && attempt < 3) {
+      await new Promise((r) => setTimeout(r, 300 * attempt));
+      return extractVisibleContent(page, attempt + 1);
+    }
+    console.warn('[extractVisibleContent] failed:', err.message);
+    throw err;
+  }
+}
+
+function evaluateVisibleContent(page) {
   return page.evaluate(() => {
     function isVisible(el) {
       if (!el) return false;
@@ -168,7 +184,8 @@ export async function renderWithChrome(url) {
     // to compare against mobile (see mobileConsistency.js). Wrapped in try/catch
     // so a failure here never breaks the existing screenshot flow.
     let desktopVisible = null;
-    try { desktopVisible = await extractVisibleContent(page); } catch { }
+    try { desktopVisible = await extractVisibleContent(page); }
+    catch (e) { console.warn('[fetcher] desktop viewport extraction failed:', e.message); }
 
     await page.setViewport({ width: 768, height: 1024, deviceScaleFactor: 1 });
     const tabletShot = await page.screenshot({
@@ -189,9 +206,15 @@ export async function renderWithChrome(url) {
       type: 'jpeg',
       quality: 60,
     });
+    // Let responsive JS (media-query listeners, mobile nav toggles, etc.)
+    // settle after the viewport change before reading visible content —
+    // avoids racing a client-side re-render, which is a common cause of
+    // "execution context destroyed" errors during extraction.
+    await new Promise((r) => setTimeout(r, 200));
     // Same snapshot, taken on the mobile viewport.
     let mobileVisible = null;
-    try { mobileVisible = await extractVisibleContent(page); } catch { }
+    try { mobileVisible = await extractVisibleContent(page); }
+    catch (e) { console.warn('[fetcher] mobile viewport extraction failed:', e.message); }
 
     const totalBytes = resources.reduce((s, r) => s + (r.bytes || 0), 0);
 
