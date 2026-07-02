@@ -3,6 +3,7 @@
 import { validateSchema } from './schema.js';
 import * as cheerio from 'cheerio';
 import { buildAccessibilityChecks } from './accessibility.js';
+import { compareMobileDesktop } from './mobileConsistency.js';
 const CATEGORIES = {
   onpage: 'On-Page SEO',
   content: 'Content Quality',
@@ -158,6 +159,43 @@ export function analyze(ctx) {
     viewport ? 'pass' : 'fail', viewport || '(missing)',
     viewport ? 'A responsive viewport meta tag is set.' :
       'Missing viewport tag — the page may not be mobile friendly.'));
+
+  // Mobile vs Desktop content consistency (Google indexes mobile-first, so
+  // content/links hidden on mobile but present on desktop are a real risk).
+  // Only runs if Chrome rendering succeeded and captured both viewports.
+  const viewportContent = render && render.viewportContent;
+  if (viewportContent && viewportContent.desktop && viewportContent.mobile) {
+    const cmp = compareMobileDesktop(viewportContent.desktop, viewportContent.mobile);
+    if (cmp) {
+      const textPct = Math.round(cmp.textRatio * 100);
+      const linkPct = Math.round(cmp.linkRatio * 100);
+
+      let status = 'pass';
+      if (textPct < 70 || linkPct < 70) status = 'fail';
+      else if (textPct < 90 || linkPct < 90) status = 'warn';
+
+      const details = [];
+      if (cmp.missingOnMobileCount > 0) {
+        const sample = cmp.missingOnMobile.slice(0, 5)
+          .map((l) => l.text || l.href).filter(Boolean).join(', ');
+        details.push(
+          `${cmp.missingOnMobileCount} lien(s) visible(s) sur desktop mais absent(s) sur mobile` +
+          (sample ? ` (ex : ${sample}).` : '.')
+        );
+      }
+      if (textPct < 100) {
+        details.push(`Le texte visible sur mobile représente ~${textPct}% de celui visible sur desktop.`);
+      }
+      if (!details.length) {
+        details.push('Le contenu et les liens visibles sont cohérents entre desktop et mobile.');
+      }
+
+      checks.push(check('usability', 'mobile_consistency', 'Mobile vs Desktop Consistency',
+        status,
+        `${textPct}% texte · ${linkPct}% liens en commun`,
+        details.join(' ')));
+    }
+  }
 
   // Favicon
   const favicon = $('link[rel*="icon"]').attr('href');

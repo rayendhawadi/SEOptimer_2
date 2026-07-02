@@ -49,6 +49,42 @@ export async function rawFetch(url) {
   }
 }
 
+/** Extract visible text + visible links from the page in its CURRENT viewport.
+ *  Runs inside the browser (page.evaluate) — no side effects on the page. */
+async function extractVisibleContent(page) {
+  return page.evaluate(() => {
+    function isVisible(el) {
+      if (!el) return false;
+      const style = window.getComputedStyle(el);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) return false;
+      return true;
+    }
+
+    const links = Array.from(document.querySelectorAll('a[href]'))
+      .filter(isVisible)
+      .map((a) => ({ href: a.href, text: (a.textContent || '').replace(/\s+/g, ' ').trim() }))
+      .filter((l) => !!l.href);
+
+    let text = '';
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+    let node;
+    while ((node = walker.nextNode())) {
+      const parent = node.parentElement;
+      if (!parent) continue;
+      const tag = parent.tagName;
+      if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT') continue;
+      if (!isVisible(parent)) continue;
+      const t = node.textContent.replace(/\s+/g, ' ').trim();
+      if (t) text += t + ' ';
+    }
+    text = text.trim();
+
+    return { links, text, wordCount: text ? text.split(/\s+/).filter(Boolean).length : 0 };
+  });
+}
+
 /** Try to render with headless Chrome. Returns null if Chrome is unavailable. */
 export async function renderWithChrome(url) {
   let browser;
@@ -128,6 +164,11 @@ export async function renderWithChrome(url) {
       type: 'jpeg',
       quality: 60,
     });
+    // Snapshot of what's actually visible in the desktop viewport — used later
+    // to compare against mobile (see mobileConsistency.js). Wrapped in try/catch
+    // so a failure here never breaks the existing screenshot flow.
+    let desktopVisible = null;
+    try { desktopVisible = await extractVisibleContent(page); } catch { }
 
     await page.setViewport({ width: 768, height: 1024, deviceScaleFactor: 1 });
     const tabletShot = await page.screenshot({
@@ -148,6 +189,9 @@ export async function renderWithChrome(url) {
       type: 'jpeg',
       quality: 60,
     });
+    // Same snapshot, taken on the mobile viewport.
+    let mobileVisible = null;
+    try { mobileVisible = await extractVisibleContent(page); } catch { }
 
     const totalBytes = resources.reduce((s, r) => s + (r.bytes || 0), 0);
 
@@ -164,6 +208,12 @@ export async function renderWithChrome(url) {
         desktop: `data:image/jpeg;base64,${desktopShot}`,
         tablet: `data:image/jpeg;base64,${tabletShot}`,
         mobile: `data:image/jpeg;base64,${mobileShot}`,
+      },
+      // Visible text/links captured at desktop vs mobile viewport width.
+      // null if extraction failed — consumers must handle that case.
+      viewportContent: {
+        desktop: desktopVisible,
+        mobile: mobileVisible,
       },
     };
   } finally {

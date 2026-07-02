@@ -20,7 +20,7 @@ const WEIGHTS = {
   // Links
   broken_links: 4, internal_links: 2, anchor_text: 1, empty_anchors: 1,
   // Usability
-  viewport: 3, favicon: 1, lang: 1, charset: 1, dom_size: 1,
+  viewport: 3, mobile_consistency: 3, favicon: 1, lang: 1, charset: 1, dom_size: 1,
   email_privacy: 1, flash: 2, iframes: 1, deprecated_html: 1,
   // Performance
   page_size: 2, requests: 1, load_time: 3, fcp: 2, compression: 2,
