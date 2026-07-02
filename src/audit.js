@@ -7,6 +7,7 @@ import { score } from './scoring.js';
 import { generateRecommendations } from './ai.js';
 import { fetchPageSpeed, psiChecks } from './psi.js';
 import { getCertificateExpiry, sslExpiryCheck } from './ssl.js';
+import { scanExposedFiles, exposedFilesCheck } from './exposedFiles.js';
 
 function envBool(v, dflt) {
   if (v == null) return dflt;
@@ -66,6 +67,18 @@ export async function runAudit(inputUrl, {
     if (sslCheck) analysis.checks.push(sslCheck);
   } catch (e) {
     console.warn('[audit] SSL expiry check failed:', e.message);
+  }
+
+  // --- Exposed sensitive files (.env, .git, backups...) — plain GET requests
+  // to a fixed list of well-known paths, independent of the crawl/render
+  // above. Best-effort: any network failure just means we skip the check.
+  try {
+    if (onProgress) onProgress({ phase: 'exposed_files', url: analysis.url });
+    const found = await scanExposedFiles(analysis.url);
+    const exposedCheck = exposedFilesCheck(found);
+    if (exposedCheck) analysis.checks.push(exposedCheck);
+  } catch (e) {
+    console.warn('[audit] exposed files check failed:', e.message);
   }
 
   const scored = score(analysis);
