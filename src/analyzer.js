@@ -5,6 +5,7 @@ import * as cheerio from 'cheerio';
 import { buildAccessibilityChecks } from './accessibility.js';
 import { compareMobileDesktop } from './mobileConsistency.js';
 import { detectThirdPartyScripts } from './thirdParty.js';
+import { checkCookieConsent } from './consent.js';
 const CATEGORIES = {
   onpage: 'On-Page SEO',
   content: 'Content Quality',
@@ -377,6 +378,15 @@ export function analyze(ctx) {
         ? 'No known third-party scripts detected.'
         : `${tp.count} script(s) tiers détecté(s), dont ${topServices || 'divers services'} — ` +
         `ralentissent le chargement d'environ ${tpDelaySec}s.`));
+
+    // Cookie/RGPD consent check — reuses the tracking-script hits (analytics/ads)
+    // already computed above, cross-referenced with any consent banner (CMP)
+    // found in the HTML.
+    const consent = checkCookieConsent(html, tp.hits);
+    checks.push(check('security', 'cookie_consent', 'Conformité RGPD (bannière cookies)',
+      consent.status,
+      consent.hasBanner ? `Bannière: ${consent.cmp || 'générique'}` : 'Aucune bannière détectée',
+      consent.summary + ' ' + consent.recommendation));
   }
 
   // CDN usage
