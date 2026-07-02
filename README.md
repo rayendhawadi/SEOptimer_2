@@ -1,3 +1,4 @@
+
 # SEO Optimizer
 
 A self-hosted SEO audit tool (like SEOptimer). Give it a URL and it **crawls the
@@ -94,3 +95,4 @@ a key-metrics table, and home-page previews — exportable to PDF.
   up to 250 unique links per audit.
 - If headless Chrome can't launch, the audit still runs (no screenshots / Chrome
   perf metrics). If both AI keys fail, a rule-based report is produced instead.
+
