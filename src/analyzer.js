@@ -88,6 +88,28 @@ export function analyze(ctx) {
   // Top keywords (kept in meta; surfaced in the Content section of the report)
   const keywords = topKeywords(bodyText, title, metaDesc, h1s.join(' '));
 
+  // "What the visitor sees" vs "what Google sees" — compares the word count
+  // of raw.html (server response, before any JS runs — this is the crawler's
+  // first, and sometimes only, view of the page) against the word count of
+  // the fully rendered page ($ above is already built from render.renderedHtml
+  // when available). A page whose content only exists after JS execution is
+  // at risk of being seen as near-empty by search engines.
+  // Only meaningful when a real render actually happened — otherwise `html`
+  // already fell back to raw.html and the two counts would trivially match.
+  if (render?.renderedHtml) {
+    const rawBodyText = cheerio.load(raw.html || '')('body').text().replace(/\s+/g, ' ').trim();
+    const rawWordCount = rawBodyText ? rawBodyText.split(' ').length : 0;
+    const jsRatio = wordCount > 0 ? rawWordCount / wordCount : 1;
+
+    const jsStatus = jsRatio >= 0.7 ? 'pass' : jsRatio >= 0.2 ? 'warn' : 'fail';
+    checks.push(check('onpage', 'js_dependency', 'Content Rendering (JS Dependency)', jsStatus,
+      `${rawWordCount} mots bruts vs ${wordCount} mots rendus`,
+      jsStatus === 'pass'
+        ? 'Le contenu principal est déjà présent dans le HTML brut — bonne indexabilité même sans exécution JS.'
+        : `La version brute contient ${rawWordCount} mot(s), la version rendue en contient ${wordCount} — ` +
+        `votre contenu dépend fortement du JavaScript, ce qui est risqué si Google n'arrive pas à l'exécuter correctement.`));
+  }
+
   // Images & ALT attributes
   const imgs = $('img').toArray();
   const imgsNoAlt = imgs.filter((e) => !($(e).attr('alt') || '').trim());

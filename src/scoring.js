@@ -11,7 +11,7 @@ const ZERO_WEIGHT = new Set([
 const WEIGHTS = {
   // On-Page
   title: 3, meta_description: 3, h1: 2, image_alt: 2, broken_images: 3,
-  canonical: 1, schema: 1, robots: 3, analytics: 1,
+  canonical: 1, schema: 1, robots: 3, analytics: 1, js_dependency: 3,
   dup_titles: 2, dup_descs: 1, missing_meta: 2,
   robots_txt: 1, sitemap: 1, friendly_urls: 1,
   // Content Quality
