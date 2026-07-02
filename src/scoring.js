@@ -10,7 +10,7 @@ const ZERO_WEIGHT = new Set([
 // Importance weight per check id (default 1). Higher = more impact on score.
 const WEIGHTS = {
   // On-Page
-  title: 3, meta_description: 3, h1: 2, image_alt: 2,
+  title: 3, meta_description: 3, h1: 2, image_alt: 2, broken_images: 3,
   canonical: 1, schema: 1, robots: 3, analytics: 1,
   dup_titles: 2, dup_descs: 1, missing_meta: 2,
   robots_txt: 1, sitemap: 1, friendly_urls: 1,
@@ -24,7 +24,7 @@ const WEIGHTS = {
   email_privacy: 1, flash: 2, iframes: 1, deprecated_html: 1,
   // Performance
   page_size: 2, requests: 1, load_time: 3, fcp: 2, compression: 2,
-  caching: 1, inline_styles: 1, image_optimization: 2, minification: 1,
+  caching: 1, inline_styles: 1, image_optimization: 2, image_format: 1, minification: 1,
   render_blocking: 2, cdn: 1,
   // Core Web Vitals (Google PageSpeed) — heavily weighted, they're ranking factors
   cwv_lcp: 4, cwv_cls: 3, cwv_inp: 3, cwv_fcp: 2, lighthouse_perf: 3,

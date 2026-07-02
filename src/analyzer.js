@@ -104,6 +104,21 @@ export function analyze(ctx) {
       'Some images are missing ALT text, hurting accessibility & SEO.'));
   }
 
+  // Broken images — any image resource captured during render with an
+  // HTTP error status (404, 403, 500...). Checked against render.resources
+  // rather than <img src> matching, so it also catches CSS background
+  // images and is immune to relative/CDN URL mismatches.
+  if (render?.resources) {
+    const brokenImgs = render.resources.filter((r) => r.type === 'image' && r.status >= 400);
+    const brokenSample = brokenImgs.slice(0, 3).map((r) => `${r.url} (${r.status})`).join(', ');
+    checks.push(check('onpage', 'broken_images', 'Broken Images',
+      brokenImgs.length === 0 ? 'pass' : 'fail',
+      brokenImgs.length === 0 ? 'No broken images' : `${brokenImgs.length} broken image(s)`,
+      brokenImgs.length === 0
+        ? 'All images returned a valid response.'
+        : `${brokenImgs.length} image(s) failed to load (e.g. ${brokenSample}) — fix or remove these dead links.`));
+  }
+
   // Links (internal vs external)
   const host = parsedUrl.hostname.replace(/^www\./, '');
   const anchors = $('a[href]').toArray();
@@ -328,6 +343,24 @@ export function analyze(ctx) {
       `${imgRes.length} images, ${imgKb} KB${largeImgs.length ? `, ${largeImgs.length} over 100KB` : ''}`,
       st === 'pass' ? 'Images are reasonably sized.'
         : 'Compress large images and serve next-gen formats (WebP/AVIF).'));
+
+    // Legacy image formats (JPEG/PNG/GIF) that could be converted to WebP.
+    // Reuses imgRes computed just above — no extra requests. Savings are a
+    // conservative estimate (~60% smaller in WebP at equivalent quality),
+    // and only images with a known byte size count toward the estimate.
+    const LEGACY_FORMAT = /\.(jpe?g|png|gif)(\?.*)?$/i;
+    const legacyImgs = imgRes.filter((r) => LEGACY_FORMAT.test(r.url) && r.bytes > 0);
+    const legacyKb = Math.round(legacyImgs.reduce((s, r) => s + (r.bytes || 0), 0) / 1024);
+    const estimatedSavingsKb = Math.round(legacyKb * 0.6);
+    const fmtStatus = legacyImgs.length === 0 ? 'pass' : estimatedSavingsKb > 300 ? 'fail' : 'warn';
+    checks.push(check('performance', 'image_format', 'Modern Image Formats (WebP/AVIF)', fmtStatus,
+      legacyImgs.length === 0
+        ? 'All images use modern formats'
+        : `${legacyImgs.length} image(s) en JPEG/PNG/GIF`,
+      legacyImgs.length === 0
+        ? 'No legacy-format images detected — good.'
+        : `${legacyImgs.length} image(s) en JPEG/PNG/GIF pourraient être converties en WebP → ` +
+        `gain estimé : ~${estimatedSavingsKb} Ko de moins sur cette page.`));
   }
 
   // Minification of CSS/JS (heuristic: are linked assets minified?)
