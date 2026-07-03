@@ -1,0 +1,138 @@
+// Localized strings for the report/comparison "chrome" (titles, labels, footer).
+// Per-check text lives with each check; this module covers the report shell so
+// the whole document reads in one language. Default language is French (the
+// primary client), with English available via the EN/FR toggle.
+
+export const LANGS = ['fr', 'en'];
+export function normalizeLang(l) {
+  return LANGS.includes(String(l || '').toLowerCase()) ? String(l).toLowerCase() : 'fr';
+}
+
+const STRINGS = {
+  en: {
+    // cover
+    auditReport: 'SEO Audit Report',
+    overallScore: 'Overall Score',
+    agentRole: 'Audit delivered by your AI Commando',
+    generated: 'Generated',
+    pagesAnalyzed: (n) => `${n} page(s) analyzed`,
+    // overview
+    scoreOverview: 'Score Overview',
+    quickWins: 'Quick Wins',
+    prioritizedRecs: 'Prioritized Recommendations',
+    actionItems: (n) => `${n} action items, highest impact first`,
+    aiBy: (p) => ` · AI insights by ${p}`,
+    // crawl
+    crawlOverview: 'Site Crawl Overview',
+    crawlSub: (pages, found) => `${pages} pages · sitemap ${found ? 'found' : 'not found'}`,
+    pagesCrawled: 'Pages crawled',
+    totalWords: 'Total words',
+    linksVerified: 'Links verified',
+    brokenLinks: 'Broken links',
+    pages: 'Pages',
+    first30: '(first 30)',
+    // on-page / content / social sub-headings
+    searchPreview: 'Search Engine Preview',
+    structuredData: 'Structured Data Types',
+    keywordConsistency: 'Keyword Consistency',
+    keywordConsistencyDesc: 'Whether your most-used keywords also appear in the title, description, headings and URL.',
+    keywordDensity: 'Keyword Density',
+    commonPhrases: 'Common Phrases',
+    headingOutline: 'Heading Outline (Home)',
+    noHeadings: 'No headings found.',
+    socialPresence: 'Social Presence',
+    socialShare: 'Social Share Preview',
+    sharingTags: 'Sharing Tags',
+    serverTech: 'Server & Technology',
+    techDetected: 'Technologies Detected',
+    brokenLinksH: 'Broken Links',
+    top25: '(top 25)',
+    noBroken: '✓ No broken links detected.',
+    // pagespeed / a11y
+    pagespeed: 'Google PageSpeed Insights',
+    fieldData: 'real-user field data',
+    labData: 'lab data',
+    coreWebVitals: 'Core Web Vitals',
+    topOpportunities: 'Top Opportunities',
+    optimization: 'Optimization',
+    estSavings: 'Est. savings',
+    a11yBP: 'Accessibility & Best Practices',
+    fromLighthouse: 'from Google Lighthouse',
+    a11yIssues: (n) => `Accessibility Issues (${n})`,
+    bpIssues: (n) => `Best-Practice Issues (${n})`,
+    a11yScope: 'Scope & method.',
+    a11yScopeBody: 'Automated checks (axe-core, an expanded WCAG 2.1 AA rule set) run on the <b>home page only</b>. Automated tools catch roughly a third of accessibility issues — a perfect score means no automated violations were found, <b>not</b> that the site is fully accessible. A manual review (keyboard navigation, screen-reader testing, focus order and meaningful alt text) is recommended before claiming compliance.',
+    // usability / technical
+    preview: 'Preview',
+    technicalDetails: 'Technical Details',
+    // trend
+    scoreTrend: 'Score Trend',
+    prevAudits: (n) => `${n} previous audit${n === 1 ? '' : 's'}`,
+    lastWord: 'last',
+    ptsSince: (d) => `${d} pts since last audit`,
+    // footer
+    preparedBy: 'Prepared by',
+    agentWord: 'agent',
+  },
+  fr: {
+    auditReport: 'Rapport d’audit SEO',
+    overallScore: 'Score global',
+    agentRole: 'Audit livré par votre Commando IA',
+    generated: 'Généré le',
+    pagesAnalyzed: (n) => `${n} page(s) analysée(s)`,
+    scoreOverview: 'Vue d’ensemble des scores',
+    quickWins: 'Gains rapides',
+    prioritizedRecs: 'Recommandations prioritaires',
+    actionItems: (n) => `${n} actions, du plus fort impact au plus faible`,
+    aiBy: (p) => ` · analyse IA par ${p}`,
+    crawlOverview: 'Vue d’ensemble de l’exploration',
+    crawlSub: (pages, found) => `${pages} pages · sitemap ${found ? 'trouvé' : 'introuvable'}`,
+    pagesCrawled: 'Pages explorées',
+    totalWords: 'Mots au total',
+    linksVerified: 'Liens vérifiés',
+    brokenLinks: 'Liens cassés',
+    pages: 'Pages',
+    first30: '(30 premières)',
+    searchPreview: 'Aperçu dans les résultats de recherche',
+    structuredData: 'Types de données structurées',
+    keywordConsistency: 'Cohérence des mots-clés',
+    keywordConsistencyDesc: 'Vérifie si vos mots-clés les plus utilisés apparaissent aussi dans le titre, la description, les sous-titres et l’URL.',
+    keywordDensity: 'Densité des mots-clés',
+    commonPhrases: 'Expressions fréquentes',
+    headingOutline: 'Plan des titres (accueil)',
+    noHeadings: 'Aucun titre trouvé.',
+    socialPresence: 'Présence sur les réseaux',
+    socialShare: 'Aperçu de partage social',
+    sharingTags: 'Balises de partage',
+    serverTech: 'Serveur & Technologie',
+    techDetected: 'Technologies détectées',
+    brokenLinksH: 'Liens cassés',
+    top25: '(25 premiers)',
+    noBroken: '✓ Aucun lien cassé détecté.',
+    pagespeed: 'Google PageSpeed Insights',
+    fieldData: 'données réelles des visiteurs',
+    labData: 'données de laboratoire',
+    coreWebVitals: 'Core Web Vitals',
+    topOpportunities: 'Principales opportunités',
+    optimization: 'Optimisation',
+    estSavings: 'Gain estimé',
+    a11yBP: 'Accessibilité & Bonnes pratiques',
+    fromLighthouse: 'via Google Lighthouse',
+    a11yIssues: (n) => `Problèmes d’accessibilité (${n})`,
+    bpIssues: (n) => `Problèmes de bonnes pratiques (${n})`,
+    a11yScope: 'Portée & méthode.',
+    a11yScopeBody: 'Les vérifications automatisées (axe-core, un ensemble étendu de règles WCAG 2.1 AA) portent sur la <b>page d’accueil uniquement</b>. Les outils automatisés détectent environ un tiers des problèmes d’accessibilité — un score parfait signifie qu’aucune violation automatisée n’a été trouvée, <b>pas</b> que le site est pleinement accessible. Une revue manuelle (navigation au clavier, test avec lecteur d’écran, ordre de focus et pertinence des textes alternatifs) est recommandée avant toute déclaration de conformité.',
+    preview: 'Aperçu',
+    technicalDetails: 'Détails techniques',
+    scoreTrend: 'Évolution du score',
+    prevAudits: (n) => `${n} audit${n === 1 ? '' : 's'} précédent${n === 1 ? '' : 's'}`,
+    lastWord: 'dernier',
+    ptsSince: (d) => `${d} pts depuis le dernier audit`,
+    preparedBy: 'Préparé par',
+    agentWord: 'agent',
+  },
+};
+
+export function t(lang) {
+  return STRINGS[normalizeLang(lang)];
+}

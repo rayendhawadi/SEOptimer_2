@@ -1,66 +1,83 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>SEO Optimizer — Free Website Audit</title>
+<title>Atlas — Audit SEO · AI Commandos</title>
+<link rel="icon" href="/brand/favicon.png"/>
 <link rel="stylesheet" href="/styles.css"/>
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">⚡ SEO&nbsp;Optimizer</div>
-    <div class="brand-sub">Instant website audit &amp; report</div>
+    <a class="brand" href="/">
+      <img class="brand-logo" src="/brand/logo-white.svg" alt="AI Commandos"/>
+    </a>
+    <div class="topbar-right">
+      <div class="lang-toggle" role="group" aria-label="Language">
+        <button class="lang-btn active" data-lang="fr">FR</button>
+        <button class="lang-btn" data-lang="en">EN</button>
+      </div>
+      <div class="brand-agent">
+        <img src="/brand/atlas.png" alt="Atlas" class="agent-ava"/>
+        <div>
+          <div class="agent-name">ATLAS</div>
+          <div class="agent-role" id="agentRole">Commando SEO</div>
+        </div>
+      </div>
+    </div>
   </header>
 
   <main>
     <section class="hero">
-      <h1>Audit any website in seconds</h1>
-      <p>Enter a URL to get a full SEO report — on-page, content, links, performance,
-         usability, social &amp; security — with AI recommendations and a PDF.</p>
+      <div class="hero-kicker" id="heroKicker">Agents IA d’élite</div>
+      <h1 id="heroTitle">Auditez n’importe quel site en quelques secondes</h1>
+      <p id="heroLead">Atlas explore votre site et livre un rapport SEO complet — on-page, contenu,
+         liens, performance, convivialité, réseaux sociaux &amp; sécurité — avec des
+         recommandations rédigées par l’IA et un PDF prêt à envoyer.</p>
 
       <div class="tabs">
-        <button class="tab active" data-tab="audit">🔍 Single Audit</button>
-        <button class="tab" data-tab="compare">⚔️ Compare Competitors</button>
+        <button class="tab active" data-tab="audit" id="tabAudit">🔍 Audit du site</button>
+        <button class="tab" data-tab="compare" id="tabCompare">⚔️ Comparer les concurrents</button>
       </div>
 
       <form id="auditForm" class="audit-form tab-panel" data-panel="audit">
-        <input id="urlInput" type="text" placeholder="https://example.com"
+        <input id="urlInput" type="text" placeholder="https://exemple.com"
                autocomplete="off" />
-        <button type="submit" id="runBtn">Audit Website</button>
+        <button type="submit" id="runBtn">Lancer l’audit</button>
       </form>
 
       <form id="compareForm" class="compare-form tab-panel hidden" data-panel="compare">
         <div class="compare-row">
-          <span class="compare-label your">Your site</span>
-          <input id="primaryInput" type="text" placeholder="https://yoursite.com" autocomplete="off" />
+          <span class="compare-label your">Votre site</span>
+          <input id="primaryInput" type="text" placeholder="https://votresite.com" autocomplete="off" />
         </div>
         <div id="competitorInputs">
           <div class="compare-row">
-            <span class="compare-label">Competitor 1</span>
-            <input type="text" class="competitor" placeholder="https://competitor1.com" autocomplete="off" />
+            <span class="compare-label">Concurrent 1</span>
+            <input type="text" class="competitor" placeholder="https://concurrent1.com" autocomplete="off" />
           </div>
           <div class="compare-row">
-            <span class="compare-label">Competitor 2</span>
-            <input type="text" class="competitor" placeholder="https://competitor2.com (optional)" autocomplete="off" />
+            <span class="compare-label">Concurrent 2</span>
+            <input type="text" class="competitor" placeholder="https://concurrent2.com (optionnel)" autocomplete="off" />
           </div>
         </div>
         <div class="compare-actions">
-          <button type="button" id="addCompetitor" class="ghost-btn">+ Add competitor</button>
-          <button type="submit" id="compareBtn">Compare Sites</button>
+          <button type="button" id="addCompetitor" class="ghost-btn">+ Ajouter un concurrent</button>
+          <button type="submit" id="compareBtn">Comparer les sites</button>
         </div>
-        <div class="compare-hint">Audits your site + up to 3 competitors (≈30–60s each).</div>
+        <div class="compare-hint" id="compareHint">Audite votre site + jusqu’à 3 concurrents (≈30–60 s chacun).</div>
       </form>
 
       <div class="examples">
-        Try: <a href="#" data-url="https://www.wikipedia.org">wikipedia.org</a> ·
+        <span id="examplesLabel">Essayez :</span> <a href="#" data-url="https://www.wikipedia.org">wikipedia.org</a> ·
         <a href="#" data-url="https://stripe.com">stripe.com</a> ·
-        <a href="#" data-url="https://welyne.com">welyne.com</a>
+        <a href="#" data-url="https://ai-commandos.com/fr">ai-commandos.com</a>
       </div>
     </section>
 
     <section id="loading" class="loading hidden">
       <div class="spinner"></div>
-      <p id="loadingText">Crawling the page…</p>
+      <p id="loadingText">Exploration de la page…</p>
     </section>
 
     <section id="error" class="error-box hidden"></section>
@@ -73,12 +90,17 @@
       <div class="result-actions">
         <button id="jsonBtn" class="export-btn">⬇ JSON</button>
         <button id="csvBtn" class="export-btn">⬇ CSV</button>
-        <button id="pdfBtn" class="pdf-btn">⬇ Download PDF</button>
+        <button id="pdfBtn" class="pdf-btn">⬇ Télécharger le PDF</button>
       </div>
     </section>
 
     <section id="reportMount"></section>
   </main>
+
+  <footer class="sitefoot">
+    <img src="/brand/logo-white.svg" alt="AI Commandos" class="foot-logo"/>
+    <span><span id="footTag">Agents IA d’élite autonomes</span> · <a href="https://ai-commandos.com/fr">ai-commandos.com</a></span>
+  </footer>
 
   <script src="/app.js"></script>
 </body>

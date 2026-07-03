@@ -13,7 +13,7 @@ const WEIGHTS = {
   title: 3, meta_description: 3, h1: 2, image_alt: 2, broken_images: 3,
   canonical: 1, schema: 1, robots: 3, analytics: 1,
   dup_titles: 2, dup_descs: 1, missing_meta: 2,
-  robots_txt: 1, sitemap: 1, friendly_urls: 1,
+  robots_txt: 1, sitemap: 1, friendly_urls: 1, hreflang: 1,
   // Content Quality
   readability: 3, word_count: 2, sentence_length: 1, keyword_density: 2,
   heading_structure: 2, text_ratio: 1, thin_pages: 2,
@@ -21,23 +21,26 @@ const WEIGHTS = {
   broken_links: 4, internal_links: 2, anchor_text: 1, empty_anchors: 1,
   // Usability
   viewport: 3, mobile_consistency: 3, favicon: 1, lang: 1, charset: 1, dom_size: 1,
-  email_privacy: 1, flash: 2, iframes: 1, deprecated_html: 1,
+  email_privacy: 1, flash: 2, iframes: 1, deprecated_html: 1, web_manifest: 1,
   // Performance
   page_size: 2, requests: 1, load_time: 3, fcp: 2, compression: 2,
   caching: 1, inline_styles: 1, image_optimization: 2, image_format: 1, minification: 1,
-  render_blocking: 2, cdn: 1,
+  render_blocking: 2, cdn: 1, img_dimensions: 2,
   // Core Web Vitals (Google PageSpeed) — heavily weighted, they're ranking factors
   cwv_lcp: 4, cwv_cls: 3, cwv_inp: 3, cwv_fcp: 2, lighthouse_perf: 3,
   // Social
   open_graph: 2, twitter_card: 1, social_links: 1,
   // Security
-  https: 4, hsts: 1, clickjacking: 1, content_type_options: 1,
+  https: 4, hsts: 1, clickjacking: 1, content_type_options: 1, security_headers: 1,
   mixed_content: 3, jquery_version: 1, cookie_consent: 3, ssl_expiry: 4,
   exposed_files: 4,
   // Accessibility (WCAG 2.1 AA via axe-core)
   a11y_contrast: 3, a11y_alt_text: 2, a11y_heading_order: 2,
   a11y_form_labels: 3, a11y_accessible_names: 2, a11y_aria: 2,
   a11y_lang: 1, a11y_page_title: 1,
+  // Expanded accessibility coverage
+  a11y_landmarks: 2, a11y_lists: 1, a11y_tables: 1, a11y_frames: 1,
+  a11y_zoom: 2, a11y_media_alt: 2, a11y_ids: 1, a11y_interactive: 2,
 };
 
 const STATUS_SCORE = { pass: 1, warn: 0.5, fail: 0 };

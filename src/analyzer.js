@@ -6,16 +6,25 @@ import { buildAccessibilityChecks } from './accessibility.js';
 import { compareMobileDesktop } from './mobileConsistency.js';
 import { detectThirdPartyScripts } from './thirdParty.js';
 import { checkCookieConsent } from './consent.js';
-const CATEGORIES = {
-  onpage: 'On-Page SEO',
-  content: 'Content Quality',
-  links: 'Links',
-  usability: 'Usability',
-  performance: 'Performance',
-  social: 'Social',
-  accessibility: 'Accessibility',
-  security: 'Security & Technology',
+const CATEGORY_LABELS = {
+  onpage: { en: 'On-Page SEO', fr: 'SEO On-Page' },
+  content: { en: 'Content Quality', fr: 'Qualité du contenu' },
+  links: { en: 'Links', fr: 'Liens' },
+  usability: { en: 'Usability', fr: 'Convivialité' },
+  performance: { en: 'Performance', fr: 'Performance' },
+  social: { en: 'Social', fr: 'Réseaux sociaux' },
+  accessibility: { en: 'Accessibility', fr: 'Accessibilité' },
+  security: { en: 'Security & Technology', fr: 'Sécurité & Technologie' },
 };
+
+// Localized category labels. buildSite/analyze pass the chosen language.
+export function getCategories(lang = 'fr') {
+  return Object.fromEntries(
+    Object.entries(CATEGORY_LABELS).map(([k, v]) => [k, v[lang] || v.en]));
+}
+
+// English map kept for back-compat with any importer that expects a plain object.
+const CATEGORIES = getCategories('en');
 
 export { CATEGORIES };
 
@@ -30,7 +39,8 @@ function check(category, id, label, status, value, detail) {
  *   render = result of renderWithChrome() | null
  */
 export function analyze(ctx) {
-  const { url, raw, render } = ctx;
+  const { url, raw, render, lang: uiLang = 'fr' } = ctx; // uiLang = report language
+  const tr = (en, fr) => (uiLang === 'fr' ? fr : en); // inline bilingual helper for new checks
   const html = (render && render.renderedHtml) || raw.html || '';
   const $ = cheerio.load(html);
   const headers = raw.headers || {};
@@ -61,6 +71,26 @@ export function analyze(ctx) {
     const st = descLen >= 70 && descLen <= 160 ? 'pass' : 'warn';
     checks.push(check('onpage', 'meta_description', 'Meta Description', st, metaDesc,
       `${descLen} characters. Ideal length is 70–160 characters.`));
+  }
+
+  // Hreflang / international targeting (relevant for multilingual sites, e.g. FR/EN)
+  const hreflangs = $('link[rel="alternate"][hreflang]')
+    .map((_, e) => ($(e).attr('hreflang') || '').trim()).get().filter(Boolean);
+  const hreflangLabel = tr('Hreflang / International SEO', 'Hreflang / SEO international');
+  if (hreflangs.length) {
+    const hasXDefault = hreflangs.some((h) => /^x-default$/i.test(h));
+    const bad = hreflangs.filter((h) => !/^x-default$/i.test(h) && !/^[a-z]{2,3}(-[a-z0-9]{2,8})*$/i.test(h));
+    checks.push(check('onpage', 'hreflang', hreflangLabel, bad.length ? 'warn' : 'pass',
+      `${hreflangs.length} hreflang (${[...new Set(hreflangs)].slice(0, 6).join(', ')})`,
+      bad.length
+        ? tr(`${bad.length} hreflang value(s) look malformed (e.g. "${bad[0]}"). Use ISO codes like "fr", "en-us", plus an "x-default".`,
+             `${bad.length} valeur(s) hreflang mal formée(s) (ex. « ${bad[0]} »). Utilisez des codes ISO comme « fr », « en-us », et un « x-default ».`)
+        : tr(`Valid hreflang annotations found${hasXDefault ? ' (incl. x-default)' : ' — consider adding an x-default'}.`,
+             `Annotations hreflang valides détectées${hasXDefault ? ' (dont x-default)' : ' — pensez à ajouter un x-default'}.`)));
+  } else {
+    checks.push(check('onpage', 'hreflang', hreflangLabel, 'warn', tr('(none)', '(aucun)'),
+      tr('No hreflang tags. If you serve more than one language or region, add hreflang so Google shows the right version to each audience.',
+         'Aucune balise hreflang. Si vous proposez plusieurs langues ou régions, ajoutez hreflang pour que Google affiche la bonne version à chaque audience.')));
   }
 
   // Headings (H1..H6)
@@ -242,6 +272,16 @@ export function analyze(ctx) {
     favicon ? 'pass' : 'warn', favicon || '(missing)',
     favicon ? 'Favicon is set.' : 'No favicon detected.'));
 
+  // Web app manifest (PWA / installability + richer mobile presence)
+  const manifest = $('link[rel="manifest"]').attr('href');
+  checks.push(check('usability', 'web_manifest', tr('Web App Manifest', 'Manifeste d’application web'),
+    manifest ? 'pass' : 'warn', manifest || tr('(missing)', '(absent)'),
+    manifest
+      ? tr('A web app manifest is present — enables install prompts and a richer mobile experience.',
+           'Un manifeste d’application web est présent — active l’installation et une meilleure expérience mobile.')
+      : tr('No web app manifest. Add one to control the app icon, name and theme colour on mobile / PWA installs.',
+           'Aucun manifeste d’application web. Ajoutez-en un pour contrôler l’icône, le nom et la couleur de thème sur mobile / PWA.')));
+
   // Language
   const lang = $('html').attr('lang');
   checks.push(check('usability', 'lang', 'Language Declaration',
@@ -411,6 +451,24 @@ export function analyze(ctx) {
     blocking < 4 ? 'Few render-blocking resources.'
       : 'Defer non-critical JS and inline critical CSS to speed first paint.'));
 
+  // Explicit image dimensions — prevents layout shift (a Core Web Vitals factor, CLS)
+  if (imgs.length) {
+    const noDim = imgs.filter((e) => {
+      const w = $(e).attr('width'), h = $(e).attr('height');
+      return !(w && h) && !/aspect-ratio/i.test($(e).attr('style') || '');
+    });
+    const ratio = noDim.length / imgs.length;
+    const dimSt = ratio <= 0.1 ? 'pass' : ratio <= 0.4 ? 'warn' : 'fail';
+    checks.push(check('performance', 'img_dimensions', tr('Image Dimensions (CLS)', 'Dimensions des images (CLS)'), dimSt,
+      tr(`${imgs.length - noDim.length}/${imgs.length} images set width & height`,
+         `${imgs.length - noDim.length}/${imgs.length} images ont width & height`),
+      dimSt === 'pass'
+        ? tr('Most images declare width & height, so the layout stays stable while they load.',
+             'La plupart des images déclarent width & height — la mise en page reste stable au chargement.')
+        : tr(`${noDim.length} image(s) have no explicit width/height (or CSS aspect-ratio), which can cause layout shift (poor CLS).`,
+             `${noDim.length} image(s) sans width/height explicites (ni aspect-ratio CSS), ce qui peut provoquer des décalages de mise en page (mauvais CLS).`)));
+  }
+
   // Third-party scripts (analytics, ads/social pixels, chat widgets, embeds)
   // detected among the resources Puppeteer already captured during render.
   if (render?.resources) {
@@ -511,6 +569,24 @@ export function analyze(ctx) {
     xcto ? 'MIME-sniffing protection enabled.' :
       'Add "X-Content-Type-Options: nosniff".'));
 
+  // Modern security headers (CSP, Referrer-Policy, Permissions-Policy)
+  const secHeaders = [
+    { key: 'content-security-policy', label: 'CSP' },
+    { key: 'referrer-policy', label: 'Referrer-Policy' },
+    { key: 'permissions-policy', label: 'Permissions-Policy' },
+  ];
+  const presentSec = secHeaders.filter((h) => headers[h.key]);
+  const missingSec = secHeaders.filter((h) => !headers[h.key]);
+  const secSt = presentSec.length === secHeaders.length ? 'pass'
+    : presentSec.length >= 1 ? 'warn' : 'fail';
+  checks.push(check('security', 'security_headers', tr('Security Headers', 'En-têtes de sécurité'), secSt,
+    presentSec.length ? presentSec.map((h) => h.label).join(', ') : tr('(none)', '(aucun)'),
+    secSt === 'pass'
+      ? tr('Content-Security-Policy, Referrer-Policy and Permissions-Policy are all set.',
+           'Content-Security-Policy, Referrer-Policy et Permissions-Policy sont tous présents.')
+      : tr(`Missing: ${missingSec.map((h) => h.label).join(', ')}. These headers harden the site against XSS, referrer leakage and abusive browser APIs.`,
+           `Manquant(s) : ${missingSec.map((h) => h.label).join(', ')}. Ces en-têtes protègent le site contre le XSS, les fuites de référent et les API navigateur abusives.`)));
+
   // Mixed content (insecure resources on a secure page)
   if (isHttps) {
     let mixed = [];
@@ -578,10 +654,10 @@ export function analyze(ctx) {
   // Homepage-only (render is only produced for the first crawled page —
   // see crawler.js). No render / no axe result -> no checks pushed, the
   // category is simply empty rather than breaking the report.
-  checks.push(...buildAccessibilityChecks(render?.accessibility));
+  checks.push(...buildAccessibilityChecks(render?.accessibility, uiLang));
   return {
     url: raw.finalUrl || url,
-    categories: CATEGORIES,
+    categories: getCategories(uiLang),
     checks,
     meta: {
       title, titleLen, metaDesc, descLen, h1: h1s, headingCounts,

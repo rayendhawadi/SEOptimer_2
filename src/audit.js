@@ -20,13 +20,14 @@ export async function runAudit(inputUrl, {
   checkLinks = true,
   usePsi,
   onProgress,
+  lang = 'fr',
 } = {}) {
   const crawlResult = await crawl(inputUrl, { maxPages, render, onProgress });
   if (!crawlResult.pages.length) {
     throw new Error('Could not fetch the URL.');
   }
 
-  const analysis = await buildSite(crawlResult, { checkLinksEnabled: checkLinks });
+  const analysis = await buildSite(crawlResult, { checkLinksEnabled: checkLinks, lang });
 
   // --- Google PageSpeed Insights (real Lighthouse + Core Web Vitals) ---
   const wantPsi = usePsi != null ? usePsi : envBool(process.env.USE_PSI, true);
@@ -82,7 +83,7 @@ export async function runAudit(inputUrl, {
   }
 
   const scored = score(analysis);
-  const ai = await generateRecommendations(analysis, scored);
+  const ai = await generateRecommendations(analysis, scored, lang);
 
   const home = crawlResult.pages.find((p) => p.render) || crawlResult.pages[0];
 
@@ -90,6 +91,7 @@ export async function runAudit(inputUrl, {
     analysis,
     scored,
     ai,
+    lang,
     screenshots: home?.render?.screenshots || null,
     generatedAt: new Date().toUTCString(),
   };

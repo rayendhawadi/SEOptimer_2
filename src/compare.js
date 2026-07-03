@@ -33,13 +33,13 @@ function toSite(res) {
   };
 }
 
-export async function runComparison(urls, { maxPages = 5, checkLinks = false, onProgress } = {}) {
+export async function runComparison(urls, { maxPages = 5, checkLinks = false, onProgress, lang = 'fr' } = {}) {
   const sites = [];
   // Sequential to avoid spawning many headless Chrome instances at once.
   for (let i = 0; i < urls.length; i++) {
     if (onProgress) onProgress({ index: i, total: urls.length, url: urls[i] });
     try {
-      const res = await runAudit(urls[i], { maxPages, render: true, checkLinks });
+      const res = await runAudit(urls[i], { maxPages, render: true, checkLinks, lang });
       sites.push(toSite(res));
     } catch (e) {
       sites.push({ url: urls[i], host: urls[i], error: e.message });
@@ -87,7 +87,7 @@ export async function runComparison(urls, { maxPages = 5, checkLinks = false, on
   }
 
   let ai = { summary: '', recommendations: [] };
-  try { ai = await generateComparison(sites); } catch {}
+  try { ai = await generateComparison(sites, lang); } catch {}
 
   return {
     sites,
@@ -95,6 +95,7 @@ export async function runComparison(urls, { maxPages = 5, checkLinks = false, on
     winners,
     gaps,
     ai,
+    lang,
     primaryHost: primary?.host || '',
     generatedAt: new Date().toUTCString(),
   };

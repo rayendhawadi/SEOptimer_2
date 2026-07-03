@@ -15,12 +15,13 @@ const PROVIDERS = {
   },
 };
 
-export async function generateRecommendations(analysis, scored) {
+export async function generateRecommendations(analysis, scored, lang = 'fr') {
   const provider = (process.env.AI_PROVIDER || 'groq').toLowerCase();
   const p = PROVIDERS[provider] || PROVIDERS.groq;
+  const langName = lang === 'en' ? 'English' : 'French';
 
   if (!p.key()) {
-    return { provider: 'none', ...ruleBasedReport(analysis, scored) };
+    return { provider: 'none', ...ruleBasedReport(analysis, scored, lang) };
   }
 
   const failing = analysis.checks.filter((c) => c.status !== 'pass');
@@ -79,7 +80,9 @@ export async function generateRecommendations(analysis, scored) {
 
   const system =
     'You are a senior SEO consultant writing a client-facing audit. ' +
-    'Be specific, actionable and concise. Return STRICT JSON only, no markdown.';
+    'Be specific, actionable and concise. Return STRICT JSON only, no markdown. ' +
+    `Write ALL human-readable text values (executiveSummary, quickWins, titles, details) in ${langName}. ` +
+    'Keep the JSON keys and the "priority"/"area" enum values exactly as specified (in English).';
 
   const user =
     `Here is the audit data for ${analysis.url}:\n` +
@@ -114,13 +117,13 @@ export async function generateRecommendations(analysis, scored) {
     if (!res.ok) {
       const text = await res.text();
       console.warn(`[ai] ${provider} ${res.status}: ${text.slice(0, 200)}`);
-      return { provider: 'fallback', ...ruleBasedReport(analysis, scored) };
+      return { provider: 'fallback', ...ruleBasedReport(analysis, scored, lang) };
     }
 
     const data = await res.json();
     const content = data.choices?.[0]?.message?.content || '{}';
     const parsed = safeJson(content);
-    if (!parsed) return { provider: 'fallback', ...ruleBasedReport(analysis, scored) };
+    if (!parsed) return { provider: 'fallback', ...ruleBasedReport(analysis, scored, lang) };
 
     return {
       provider,
@@ -131,7 +134,7 @@ export async function generateRecommendations(analysis, scored) {
     };
   } catch (err) {
     console.warn('[ai] request failed:', err.message);
-    return { provider: 'fallback', ...ruleBasedReport(analysis, scored) };
+    return { provider: 'fallback', ...ruleBasedReport(analysis, scored, lang) };
   }
 }
 
@@ -144,7 +147,8 @@ function safeJson(str) {
 }
 
 // Deterministic fallback so the tool still produces a useful report offline.
-function ruleBasedReport(analysis, scored) {
+function ruleBasedReport(analysis, scored, lang = 'fr') {
+  const fr = lang === 'fr';
   const failing = analysis.checks.filter((c) => c.status === 'fail');
   const warning = analysis.checks.filter((c) => c.status === 'warn');
 
@@ -153,7 +157,7 @@ function ruleBasedReport(analysis, scored) {
     recommendations.push({
       priority: 'High',
       area: analysis.categories[c.category],
-      title: `Fix: ${c.label}`,
+      title: `${fr ? 'Corriger' : 'Fix'}: ${c.label}`,
       detail: c.detail,
     });
   }
@@ -161,15 +165,17 @@ function ruleBasedReport(analysis, scored) {
     recommendations.push({
       priority: 'Medium',
       area: analysis.categories[c.category],
-      title: `Improve: ${c.label}`,
+      title: `${fr ? 'Améliorer' : 'Improve'}: ${c.label}`,
       detail: c.detail,
     });
   }
 
   return {
-    executiveSummary:
-      `This site scored ${scored.overall}/100 (grade ${scored.overallGrade}). ` +
-      `${failing.length} critical issue(s) and ${warning.length} improvement(s) were found.`,
+    executiveSummary: fr
+      ? `Ce site obtient ${scored.overall}/100 (note ${scored.overallGrade}). ` +
+        `${failing.length} problème(s) critique(s) et ${warning.length} amélioration(s) ont été identifiés.`
+      : `This site scored ${scored.overall}/100 (grade ${scored.overallGrade}). ` +
+        `${failing.length} critical issue(s) and ${warning.length} improvement(s) were found.`,
     quickWins: failing.slice(0, 5).map((c) => `${c.label}: ${c.detail}`),
     recommendations,
   };
@@ -177,12 +183,13 @@ function ruleBasedReport(analysis, scored) {
 
 // ---- Competitor comparison ------------------------------------------------
 
-export async function generateComparison(sites) {
+export async function generateComparison(sites, lang = 'fr') {
   const provider = (process.env.AI_PROVIDER || 'groq').toLowerCase();
   const p = PROVIDERS[provider] || PROVIDERS.groq;
   const valid = sites.filter((s) => !s.error);
+  const langName = lang === 'en' ? 'English' : 'French';
 
-  if (!p.key() || valid.length < 2) return ruleBasedComparison(sites);
+  if (!p.key() || valid.length < 2) return ruleBasedComparison(sites, lang);
 
   const data = valid.map((s, i) => ({
     site: s.host,
@@ -194,7 +201,8 @@ export async function generateComparison(sites) {
   }));
 
   const system = 'You are an SEO strategist comparing a site against its competitors. ' +
-    'Be specific and actionable. Return STRICT JSON only.';
+    'Be specific and actionable. Return STRICT JSON only. ' +
+    `Write all human-readable text (summary, titles, details) in ${langName}; keep JSON keys and enum values in English.`;
   const user = `Compare these sites (the first is "YOUR SITE"):\n${JSON.stringify(data)}\n\n` +
     `Return JSON: {\n` +
     `  "summary": "3-4 sentences: how YOUR SITE stacks up vs competitors and the biggest opportunities to overtake them",\n` +
@@ -211,32 +219,39 @@ export async function generateComparison(sites) {
         messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
       }),
     });
-    if (!res.ok) return ruleBasedComparison(sites);
+    if (!res.ok) return ruleBasedComparison(sites, lang);
     const j = await res.json();
     const parsed = safeJson(j.choices?.[0]?.message?.content || '{}');
-    if (!parsed) return ruleBasedComparison(sites);
+    if (!parsed) return ruleBasedComparison(sites, lang);
     return {
       provider,
       summary: parsed.summary || '',
       recommendations: parsed.recommendations || [],
     };
   } catch {
-    return ruleBasedComparison(sites);
+    return ruleBasedComparison(sites, lang);
   }
 }
 
-function ruleBasedComparison(sites) {
+function ruleBasedComparison(sites, lang = 'fr') {
+  const fr = lang === 'fr';
   const valid = sites.filter((s) => !s.error);
   const primary = sites[0];
   if (!primary || primary.error || valid.length < 2) {
-    return { provider: 'fallback', summary: 'Not enough valid sites to compare.', recommendations: [] };
+    return {
+      provider: 'fallback',
+      summary: fr ? 'Pas assez de sites valides à comparer.' : 'Not enough valid sites to compare.',
+      recommendations: [],
+    };
   }
-  const avg = (k) => Math.round(valid.reduce((a, s) => a + (s.categories[k]?.score || 0), 0) / valid.length);
   const lead = primary.overall - Math.max(...valid.filter((s) => s !== primary).map((s) => s.overall));
   return {
     provider: 'fallback',
-    summary: `${primary.host} scored ${primary.overall}/100, ` +
-      (lead >= 0 ? `leading the comparison by ${lead} points.` : `trailing the top competitor by ${-lead} points.`),
+    summary: fr
+      ? `${primary.host} obtient ${primary.overall}/100, ` +
+        (lead >= 0 ? `en tête de la comparaison avec ${lead} point(s) d’avance.` : `en retard de ${-lead} point(s) sur le meilleur concurrent.`)
+      : `${primary.host} scored ${primary.overall}/100, ` +
+        (lead >= 0 ? `leading the comparison by ${lead} points.` : `trailing the top competitor by ${-lead} points.`),
     recommendations: [],
   };
 }

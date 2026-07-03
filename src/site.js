@@ -6,7 +6,7 @@
 //  - per-page summaries + outlines + broken-link list used by the report.
 
 import dns from 'node:dns/promises';
-import { analyze, CATEGORIES } from './analyzer.js';
+import { analyze } from './analyzer.js';
 import { analyzeContent, analyzeHeadings } from './content.js';
 import { extractLinks, checkLinks } from './links.js';
 
@@ -56,13 +56,13 @@ function summarizePage(page, baseHost) {
   };
 }
 
-export async function buildSite(crawlResult, { checkLinksEnabled = true } = {}) {
+export async function buildSite(crawlResult, { checkLinksEnabled = true, lang = 'fr' } = {}) {
   const { pages, baseHost, sitemapFound, robotsTxt = {} } = crawlResult;
   const htmlPages = pages.filter((p) => p.isHtml && p.ok);
   const home = htmlPages[0] || pages[0];
 
   // Homepage base checks (onpage/usability/performance/social/security) + meta.
-  const base = analyze({ url: home.url, raw: home.raw, render: home.render });
+  const base = analyze({ url: home.url, raw: home.raw, render: home.render, lang });
 
   // Per-page summaries.
   const summaries = htmlPages.map((p) => summarizePage(p, baseHost));
@@ -269,5 +269,5 @@ export async function buildSite(crawlResult, { checkLinksEnabled = true } = {}) 
     },
   };
 
-  return { url: base.url, categories: CATEGORIES, checks, meta, site };
+  return { url: base.url, categories: base.categories, checks, meta, site };
 }

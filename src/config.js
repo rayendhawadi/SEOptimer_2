@@ -1,15 +1,20 @@
-// White-label branding. Set these in .env to put your agency's identity on every
-// report and PDF. Falls back to sensible defaults.
+// Branding for every report and PDF. Defaults to the AI Commandos identity
+// (agent: Atlas); each field can still be overridden per-deployment via .env.
 
-// Branding is OFF by default (neutral internal report). To put an agency identity
-// on the reports, fill BRAND_NAME (and optionally a logo/website/email) in .env.
+import { PALETTE } from './brandAssets.js';
+
 export function getBrand(overrides = {}) {
   return {
-    name: overrides.name || process.env.BRAND_NAME || '',
-    color: overrides.color || process.env.BRAND_COLOR || '#1d4ed8',
-    color2: overrides.color2 || process.env.BRAND_COLOR2 || '#0f172a',
+    name: overrides.name || process.env.BRAND_NAME || 'AI Commandos',
+    // Cover gradient runs color2 (noir) -> color (green).
+    color: overrides.color || process.env.BRAND_COLOR || PALETTE.green,
+    color2: overrides.color2 || process.env.BRAND_COLOR2 || PALETTE.noir,
+    accent: overrides.accent || process.env.BRAND_ACCENT || PALETTE.red,
     logo: overrides.logo || process.env.BRAND_LOGO_URL || '',
-    website: overrides.website || process.env.BRAND_WEBSITE || '',
+    agent: overrides.agent || process.env.BRAND_AGENT || 'Atlas',
+    tagline: overrides.tagline || process.env.BRAND_TAGLINE ||
+      'Agents IA d’élite — audit propulsé par Atlas',
+    website: overrides.website || process.env.BRAND_WEBSITE || 'ai-commandos.com',
     email: overrides.email || process.env.BRAND_EMAIL || '',
     phone: overrides.phone || process.env.BRAND_PHONE || '',
   };

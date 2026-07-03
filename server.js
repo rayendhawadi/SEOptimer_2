@@ -9,6 +9,11 @@ import { runComparison } from './src/compare.js';
 import { renderComparison } from './src/compareReport.js';
 import { getBrand } from './src/config.js';
 import { addEntry, getHistory } from './src/history.js';
+import { normalizeLang } from './src/i18n.js';
+
+// Report language: per-request (body/query) → env default → French.
+const reqLang = (req) => normalizeLang(
+  req.body?.lang || req.query?.lang || process.env.REPORT_LANG);
 
 const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
 
@@ -30,8 +35,9 @@ const DEFAULT_MAX_PAGES = 30;
 app.post('/api/audit', async (req, res) => {
   const { url } = req.body || {};
   if (!url) return res.status(400).json({ error: 'Missing "url".' });
+  const lang = reqLang(req);
   try {
-    const result = await runAudit(url, { render: true, checkLinks: true, maxPages: DEFAULT_MAX_PAGES });
+    const result = await runAudit(url, { render: true, checkLinks: true, maxPages: DEFAULT_MAX_PAGES, lang });
 
     // Score history: read prior entries (for the trend), then record this one.
     const host = hostOf(result.analysis.url);
@@ -70,13 +76,13 @@ app.get('/api/pdf', async (req, res) => {
   try {
     let result = cache.get(cacheKey(url));
     if (!result) {
-      result = await runAudit(url, { render: true });
+      result = await runAudit(url, { render: true, lang: reqLang(req) });
       result.history = getHistory(hostOf(result.analysis.url));
       cache.set(cacheKey(result.analysis.url), result);
     }
     result.brand = result.brand || getBrand();
-    const html = renderReport(result);
-    const pdf = await htmlToPdf(html);
+    const html = renderReport(result); // result.lang carries the audited language
+    const pdf = await htmlToPdf(html, { footer: `${result.brand.name} · ${result.brand.agent || 'Atlas'}` });
     const host = new URL(result.analysis.url).hostname.replace(/^www\./, '');
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition',
@@ -97,16 +103,17 @@ app.post('/api/compare', async (req, res) => {
     .filter(Boolean)
     .slice(0, 4);
   if (list.length < 2) return res.status(400).json({ error: 'Add at least one competitor URL.' });
+  const lang = reqLang(req);
   try {
     // Lighter per-site crawl so N audits finish in reasonable time.
-    const cmp = await runComparison(list, { maxPages: 5, checkLinks: false });
+    const cmp = await runComparison(list, { maxPages: 5, checkLinks: false, lang });
     compareCache.set(cacheKey(cmp.sites[0].url || url), cmp);
     compareCache.set(cacheKey(url), cmp);
     res.json({
       primaryHost: cmp.primaryHost,
       sites: cmp.sites.map((s) => ({ host: s.host, url: s.url, overall: s.overall, grade: s.grade, error: s.error })),
       winners: cmp.winners,
-      reportHtml: renderComparison(cmp, { brand: getBrand() }),
+      reportHtml: renderComparison(cmp, { brand: getBrand(), lang }),
     });
   } catch (err) {
     console.error('[compare] error:', err);
@@ -120,7 +127,9 @@ app.get('/api/compare-pdf', async (req, res) => {
   try {
     let cmp = compareCache.get(cacheKey(url));
     if (!cmp) return res.status(404).send('Run the comparison first, then download.');
-    const pdf = await htmlToPdf(renderComparison(cmp, { brand: getBrand() }));
+    const cmpBrand = getBrand();
+    const pdf = await htmlToPdf(renderComparison(cmp, { brand: cmpBrand, lang: cmp.lang }),
+      { footer: `${cmpBrand.name} · ${cmpBrand.agent || 'Atlas'}` });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="seo-comparison-${cmp.primaryHost}.pdf"`);
     res.end(pdf);

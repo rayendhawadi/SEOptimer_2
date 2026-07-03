@@ -19,25 +19,113 @@ const mount = document.getElementById('reportMount');
 
 let lastUrl = '';
 let lastMode = 'audit'; // 'audit' | 'compare'
+let lang = localStorage.getItem('aic_lang') || 'fr';
 
-const AUDIT_PHASES = [
-  'Crawling website & sub-pages…',
-  'Analyzing on-page SEO & content…',
-  'Checking readability & headings…',
-  'Verifying links (broken-link scan)…',
-  'Measuring performance & security…',
-  'Running Google PageSpeed…',
-  'Generating AI recommendations…',
-  'Building your report…',
-];
-const COMPARE_PHASES = [
-  'Auditing your site…',
-  'Auditing competitors…',
-  'Running PageSpeed on each site…',
-  'Comparing scores…',
-  'Writing competitive analysis…',
-  'Building comparison report…',
-];
+const PHASES = {
+  fr: {
+    audit: [
+      'Atlas explore le site & ses sous-pages…',
+      'Analyse du SEO on-page & du contenu…',
+      'Vérification de la lisibilité & des titres…',
+      'Contrôle des liens (scan des liens cassés)…',
+      'Mesure de la performance & de la sécurité…',
+      'Lancement de Google PageSpeed…',
+      'Rédaction des recommandations par l’IA…',
+      'Construction de votre rapport…',
+    ],
+    compare: [
+      'Audit de votre site…',
+      'Audit des concurrents…',
+      'PageSpeed sur chaque site…',
+      'Comparaison des scores…',
+      'Rédaction de l’analyse concurrentielle…',
+      'Construction du rapport comparatif…',
+    ],
+  },
+  en: {
+    audit: [
+      'Atlas is crawling the site & sub-pages…',
+      'Analyzing on-page SEO & content…',
+      'Checking readability & headings…',
+      'Verifying links (broken-link scan)…',
+      'Measuring performance & security…',
+      'Running Google PageSpeed…',
+      'Writing AI recommendations…',
+      'Building your report…',
+    ],
+    compare: [
+      'Auditing your site…',
+      'Auditing competitors…',
+      'PageSpeed on each site…',
+      'Comparing scores…',
+      'Writing the competitive analysis…',
+      'Building the comparison report…',
+    ],
+  },
+};
+
+// Landing-page copy per language (report language is driven by `lang` too).
+const UI = {
+  fr: {
+    agentRole: 'Commando SEO',
+    heroKicker: 'Agents IA d’élite',
+    heroTitle: 'Auditez n’importe quel site en quelques secondes',
+    heroLead: 'Atlas explore votre site et livre un rapport SEO complet — on-page, contenu, liens, performance, convivialité, réseaux sociaux & sécurité — avec des recommandations rédigées par l’IA et un PDF prêt à envoyer.',
+    tabAudit: '🔍 Audit du site',
+    tabCompare: '⚔️ Comparer les concurrents',
+    runBtn: 'Lancer l’audit',
+    urlPlaceholder: 'https://exemple.com',
+    compareBtn: 'Comparer les sites',
+    addCompetitor: '+ Ajouter un concurrent',
+    compareHint: 'Audite votre site + jusqu’à 3 concurrents (≈30–60 s chacun).',
+    examplesLabel: 'Essayez :',
+    pdfBtn: '⬇ Télécharger le PDF',
+    note: 'Note',
+    footTag: 'Agents IA d’élite autonomes',
+  },
+  en: {
+    agentRole: 'SEO Commando',
+    heroKicker: 'Elite AI agents',
+    heroTitle: 'Audit any website in seconds',
+    heroLead: 'Atlas crawls your site and delivers a full SEO report — on-page, content, links, performance, usability, social & security — with AI-written recommendations and a ready-to-send PDF.',
+    tabAudit: '🔍 Single Audit',
+    tabCompare: '⚔️ Compare Competitors',
+    runBtn: 'Audit Website',
+    urlPlaceholder: 'https://example.com',
+    compareBtn: 'Compare Sites',
+    addCompetitor: '+ Add competitor',
+    compareHint: 'Audits your site + up to 3 competitors (≈30–60s each).',
+    examplesLabel: 'Try:',
+    pdfBtn: '⬇ Download PDF',
+    note: 'Grade',
+    footTag: 'Elite autonomous AI agents',
+  },
+};
+
+function applyLang(l) {
+  lang = (l === 'en') ? 'en' : 'fr';
+  localStorage.setItem('aic_lang', lang);
+  document.documentElement.lang = lang;
+  const u = UI[lang];
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('agentRole', u.agentRole);
+  set('heroKicker', u.heroKicker);
+  set('heroTitle', u.heroTitle);
+  set('heroLead', u.heroLead);
+  set('tabAudit', u.tabAudit);
+  set('tabCompare', u.tabCompare);
+  set('runBtn', u.runBtn);
+  set('compareBtn', u.compareBtn);
+  set('addCompetitor', u.addCompetitor);
+  set('compareHint', u.compareHint);
+  set('examplesLabel', u.examplesLabel);
+  set('footTag', u.footTag);
+  const urlIn = document.getElementById('urlInput');
+  if (urlIn) urlIn.placeholder = u.urlPlaceholder;
+  if (!pdfBtn.disabled) pdfBtn.textContent = u.pdfBtn;
+  document.querySelectorAll('.lang-btn').forEach((b) =>
+    b.classList.toggle('active', b.dataset.lang === lang));
+}
 
 // ---- tabs ------------------------------------------------------------------
 document.querySelectorAll('.tab').forEach((tab) => {
@@ -49,6 +137,12 @@ document.querySelectorAll('.tab').forEach((tab) => {
       p.classList.toggle('hidden', p.dataset.panel !== which));
   });
 });
+
+// ---- language toggle -------------------------------------------------------
+document.querySelectorAll('.lang-btn').forEach((b) => {
+  b.addEventListener('click', () => applyLang(b.dataset.lang));
+});
+applyLang(lang);
 
 document.querySelectorAll('.examples a').forEach((a) => {
   a.addEventListener('click', (e) => {
@@ -107,12 +201,12 @@ auditForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const url = urlInput.value.trim();
   if (!url) return;
-  const timer = startLoading(AUDIT_PHASES, runBtn);
+  const timer = startLoading(PHASES[lang].audit, runBtn);
   try {
     const res = await fetch('/api/audit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({ url, lang }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Audit failed');
@@ -120,7 +214,7 @@ auditForm.addEventListener('submit', async (e) => {
     lastUrl = data.url;
     lastMode = 'audit';
     resultUrl.textContent = data.url;
-    resultGrade.textContent = 'Grade ' + data.grade;
+    resultGrade.textContent = UI[lang].note + ' ' + data.grade;
     resultGrade.style.background = gradeColor(data.overall);
     jsonBtn.style.display = '';
     csvBtn.style.display = '';
@@ -142,15 +236,15 @@ compareForm.addEventListener('submit', async (e) => {
   const url = primaryInput.value.trim();
   const competitors = [...document.querySelectorAll('.competitor')]
     .map((i) => i.value.trim()).filter(Boolean);
-  if (!url) { alert('Enter your site URL.'); return; }
-  if (competitors.length === 0) { alert('Add at least one competitor.'); return; }
+  if (!url) { alert(lang === 'en' ? 'Enter your site URL.' : 'Entrez l’URL de votre site.'); return; }
+  if (competitors.length === 0) { alert(lang === 'en' ? 'Add at least one competitor.' : 'Ajoutez au moins un concurrent.'); return; }
 
-  const timer = startLoading(COMPARE_PHASES, compareBtn);
+  const timer = startLoading(PHASES[lang].compare, compareBtn);
   try {
     const res = await fetch('/api/compare', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, competitors }),
+      body: JSON.stringify({ url, competitors, lang }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Comparison failed');
@@ -159,9 +253,11 @@ compareForm.addEventListener('submit', async (e) => {
     lastMode = 'compare';
     jsonBtn.style.display = 'none';
     csvBtn.style.display = 'none';
-    resultUrl.textContent = data.primaryHost + ' vs ' + (data.sites.length - 1) + ' competitor(s)';
+    const vs = lang === 'en' ? ' vs ' : ' vs ';
+    const compWord = lang === 'en' ? 'competitor(s)' : 'concurrent(s)';
+    resultUrl.textContent = data.primaryHost + vs + (data.sites.length - 1) + ' ' + compWord;
     const me = data.sites[0];
-    resultGrade.textContent = me.error ? 'error' : 'Grade ' + me.grade;
+    resultGrade.textContent = me.error ? (lang === 'en' ? 'error' : 'erreur') : UI[lang].note + ' ' + me.grade;
     resultGrade.style.background = me.error ? '#ef4444' : gradeColor(me.overall);
     resultBar.classList.remove('hidden');
     renderIntoIframe(data.reportHtml);
@@ -180,10 +276,10 @@ pdfBtn.addEventListener('click', async () => {
   if (!lastUrl || pdfBtn.disabled) return;
   const original = pdfBtn.textContent;
   pdfBtn.disabled = true;
-  pdfBtn.textContent = '⏳ Generating PDF…';
+  pdfBtn.textContent = lang === 'en' ? '⏳ Generating PDF…' : '⏳ Génération du PDF…';
   try {
     const endpoint = lastMode === 'compare' ? '/api/compare-pdf' : '/api/pdf';
-    const res = await fetch(endpoint + '?url=' + encodeURIComponent(lastUrl));
+    const res = await fetch(endpoint + '?url=' + encodeURIComponent(lastUrl) + '&lang=' + lang);
     if (!res.ok) throw new Error((await res.text().catch(() => '')) || ('HTTP ' + res.status));
     const blob = await res.blob();
     let filename = lastMode === 'compare' ? 'seo-comparison.pdf' : 'seo-report.pdf';
@@ -196,7 +292,7 @@ pdfBtn.addEventListener('click', async () => {
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(objUrl), 4000);
   } catch (err) {
-    alert('Could not generate the PDF: ' + err.message);
+    alert((lang === 'en' ? 'Could not generate the PDF: ' : 'Impossible de générer le PDF : ') + err.message);
   } finally {
     pdfBtn.disabled = false;
     pdfBtn.textContent = original;
@@ -218,8 +314,8 @@ csvBtn.addEventListener('click', () => {
 });
 
 function gradeColor(pct) {
-  if (pct >= 80) return '#22c55e';
-  if (pct >= 60) return '#84cc16';
-  if (pct >= 45) return '#f59e0b';
-  return '#ef4444';
+  if (pct >= 80) return '#0abe9f'; // AI Commandos green
+  if (pct >= 60) return '#6cc24a';
+  if (pct >= 45) return '#f38938'; // Atlas orange
+  return '#ed4514';                // AI Commandos red
 }
